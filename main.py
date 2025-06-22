@@ -1,0 +1,1 @@
+# Arquivo main.py com suporte a carrinho e botões interativos (será gerado em breve)
