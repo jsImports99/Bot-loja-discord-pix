@@ -1,1 +1,0 @@
-# Bot-loja-discord-pix
