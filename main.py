@@ -1,147 +1,90 @@
-import os
-import json
 import discord
 from discord.ext import commands
-from discord import app_commands, Interaction, ButtonStyle
 from discord.ui import View, Button
-from keep_alive import keep_alive
-import requests
-import base64
-import io
-
-dotenv_path = ".env"
-if os.path.exists(dotenv_path):
-    from dotenv import load_dotenv
-    load_dotenv(dotenv_path)
 
 intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="!", intents=intents)
-user_carts = {}
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-@bot.event
-async def on_ready():
-    await bot.tree.sync()
-    print(f"✅ Bot conectado como {bot.user}")
+# Carrinho temporário por usuário
+carrinhos = {}
 
-def carregar_produtos():
-    with open("produtos.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+# Produtos disponíveis
+produtos = [
+    ("🧱 1Dungeon M/Normal", 0.50),
+    ("🪨 1Dungeon M/Desafio", 0.70),
+    ("💎 Geminhas 63", 15.00),
+    ("😱 Fenda do medo", 20.00),
+    ("🔥 Fenda anciã", 40.00),
+    ("🛠️ Fazer/Arrumar build", 50.00),
+    ("⚔️ Piloto PVP - Pegar lenda", 100.00)
+]
 
-def gerar_total(carrinho):
-    total = 0.0
-    for item in carrinho:
-        total += item["preco"] * item["quantidade"]
-    return total
-
-class ProdutoView(View):
+class CarrinhoView(View):
     def __init__(self, user_id):
         super().__init__(timeout=None)
         self.user_id = user_id
-        self.produtos = carregar_produtos()
-        for p in self.produtos:
-            self.add_item(ProdutoBotao(p["nome"], p["preco"], user_id))
+        for nome, valor in produtos:
+            self.add_item(ProdutoButton(label=f"{nome} (R$ {valor:.2f})", produto=(nome, valor)))
+        self.add_item(FinalizarButton())
 
-        self.add_item(FinalizarCompraButton(user_id))
+class ProdutoButton(Button):
+    def __init__(self, label, produto):
+        super().__init__(label=label, style=discord.ButtonStyle.secondary)
+        self.produto = produto
 
-class ProdutoBotao(Button):
-    def __init__(self, nome, preco, user_id):
-        super().__init__(label=f"{nome} (R$ {preco:.2f})", style=ButtonStyle.secondary)
-        self.nome = nome
-        self.preco = preco
-        self.user_id = user_id
-
-    async def callback(self, interaction: Interaction):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Esse carrinho não é seu.", ephemeral=True)
-            return
-
-        user_cart = user_carts.setdefault(self.user_id, [])
-        for item in user_cart:
-            if item["nome"] == self.nome:
-                item["quantidade"] += 1
-                break
-        else:
-            user_cart.append({"nome": self.nome, "preco": self.preco, "quantidade": 1})
-
-        resumo = "\n".join([f"- {i['quantidade']}x {i['nome']} (R$ {i['preco'] * i['quantidade']:.2f})" for i in user_cart])
-        total = gerar_total(user_cart)
+    async def callback(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+        if user_id not in carrinhos:
+            carrinhos[user_id] = []
+        carrinhos[user_id].append(self.produto)
         await interaction.response.send_message(
-            f"🛒 Produto adicionado ao carrinho!\n\n📦 Carrinho atual:\n{resumo}\n\n💰 Total: R$ {total:.2f}",
+            f"✅ **{self.produto[0]}** adicionado ao carrinho!",
             ephemeral=True
         )
 
-class FinalizarCompraButton(Button):
-    def __init__(self, user_id):
-        super().__init__(label="✅ Finalizar Compra", style=ButtonStyle.success)
-        self.user_id = user_id
+class FinalizarButton(Button):
+    def __init__(self):
+        super().__init__(label="✅ Finalizar Compra", style=discord.ButtonStyle.success)
 
-    async def callback(self, interaction: Interaction):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Esse carrinho não é seu.", ephemeral=True)
+    async def callback(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+        if user_id not in carrinhos or len(carrinhos[user_id]) == 0:
+            await interaction.response.send_message("🛒 Seu carrinho está vazio!", ephemeral=True)
             return
 
-        carrinho = user_carts.get(self.user_id, [])
-        if not carrinho:
-            await interaction.response.send_message("❗ Seu carrinho está vazio.", ephemeral=True)
-            return
+        resumo = ""
+        total = 0
+        for nome, valor in carrinhos[user_id]:
+            resumo += f"• {nome} — R$ {valor:.2f}\n"
+            total += valor
 
-        total = gerar_total(carrinho)
-        descricao = ", ".join([f"{item['quantidade']}x {item['nome']}" for item in carrinho])
-
-        headers = {
-            "Authorization": f"Bearer {os.getenv('MERCADO_PAGO_ACCESS_TOKEN')}",
-            "Content-Type": "application/json"
-        }
-
-        body = {
-            "transaction_amount": total,
-            "description": descricao,
-            "payment_method_id": "pix",
-            "payer": {
-                "email": "comprador@email.com"
-            },
-            "notification_url": os.getenv("WEBHOOK_URL")
-        }
-
-        response = requests.post("https://api.mercadopago.com/v1/payments", headers=headers, json=body)
-        data = response.json()
-
-        if "point_of_interaction" not in data:
-            await interaction.response.send_message("⚠️ Erro ao gerar pagamento Pix.", ephemeral=True)
-            return
-
-        qr_code = data["point_of_interaction"]["transaction_data"]["qr_code"]
-        qr_image = base64.b64decode(data["point_of_interaction"]["transaction_data"]["qr_code_base64"])
-
-        file = discord.File(io.BytesIO(qr_image), filename="qrcode.png")
         await interaction.response.send_message(
-            f"✅ Compra criada!\n\n🧾 **Resumo:** {descricao}\n💰 Total: R$ {total:.2f}\n\nEscaneie o QR Code para pagar ou use o botão abaixo.",
-            file=file,
-            view=PixCodeView(qr_code)
+            f"🛍️ **Resumo do seu pedido:**\n\n{resumo}\n💰 **Total: R$ {total:.2f}**\n\n"
+            "📲 Aguarde o pagamento ser gerado via Pix automático.",
+            ephemeral=True
         )
-        user_carts[self.user_id] = []
+        carrinhos[user_id] = []
 
-class PixCodeView(View):
-    def __init__(self, qr_code):
-        super().__init__()
-        self.add_item(PixCodeButton(qr_code))
+@bot.event
+async def on_ready():
+    print(f"✅ Bot conectado como {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"📌 {len(synced)} comandos sincronizados.")
+    except Exception as e:
+        print(f"Erro ao sincronizar comandos: {e}")
 
-class PixCodeButton(Button):
-    def __init__(self, qr_code):
-        super().__init__(label="🔗 Copiar código Pix", style=ButtonStyle.primary)
-        self.qr_code = qr_code
-
-    async def callback(self, interaction: Interaction):
-        await interaction.response.send_message(f"🔢 Código Pix:\n```{self.qr_code}```", ephemeral=True)
-
-@bot.tree.command(name="comprar")
-async def comprar(interaction: Interaction):
-    view = ProdutoView(interaction.user.id)
-    await interaction.response.send_message(
-        "🛍️ Selecione os produtos abaixo para adicionar ao seu carrinho:",
-        view=view,
-        ephemeral=True
+@bot.tree.command(name="comprar", description="Abrir o menu de compra dos serviços")
+async def comprar(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="🛒 Loja de Serviços",
+        description="Clique nos botões abaixo para adicionar produtos ao carrinho.\nFinalize quando estiver pronto!",
+        color=discord.Color.blurple()
     )
+    embed.set_footer(text="JS IMPORT'S | Discord Bot Store")
+    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/891/891419.png")  # Ícone opcional
 
-keep_alive()
-bot.run(os.getenv("DISCORD_TOKEN"))# Arquivo main.py com suporte a carrinho e botões interativos (será gerado em breve)
+    await interaction.response.send_message(embed=embed, view=CarrinhoView(interaction.user.id), ephemeral=True)
+
+# Iniciar o bot
+bot.run("SEU_TOKEN_AQUI")
