@@ -1,14 +1,18 @@
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Carrega variáveis do .env
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Carrinho temporário por usuário
+# Carrinho por usuário
 carrinhos = {}
 
-# Produtos disponíveis
+# Lista de produtos
 produtos = [
     ("🧱 1Dungeon M/Normal", 0.50),
     ("🪨 1Dungeon M/Desafio", 0.70),
@@ -59,8 +63,7 @@ class FinalizarButton(Button):
             total += valor
 
         await interaction.response.send_message(
-            f"🛍️ **Resumo do seu pedido:**\n\n{resumo}\n💰 **Total: R$ {total:.2f}**\n\n"
-            "📲 Aguarde o pagamento ser gerado via Pix automático.",
+            f"🧾 **Resumo do Pedido:**\n\n{resumo}\n💰 **Total: R$ {total:.2f}**",
             ephemeral=True
         )
         carrinhos[user_id] = []
@@ -74,17 +77,17 @@ async def on_ready():
     except Exception as e:
         print(f"Erro ao sincronizar comandos: {e}")
 
-@bot.tree.command(name="comprar", description="Abrir o menu de compra dos serviços")
+@bot.tree.command(name="comprar", description="Abrir menu de compra com botões")
 async def comprar(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="🛒 Loja de Serviços",
-        description="Clique nos botões abaixo para adicionar produtos ao carrinho.\nFinalize quando estiver pronto!",
+        title="🛍️ Loja JS IMPORT'S",
+        description="Clique nos botões abaixo para montar seu carrinho de compras.\nFinalize a compra no botão verde!",
         color=discord.Color.blurple()
     )
-    embed.set_footer(text="JS IMPORT'S | Discord Bot Store")
-    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/891/891419.png")  # Ícone opcional
+    embed.set_footer(text="Discord Store • Serviços Profissionais")
+    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/891/891419.png")
 
     await interaction.response.send_message(embed=embed, view=CarrinhoView(interaction.user.id), ephemeral=True)
 
-# Iniciar o bot
-bot.run("SEU_TOKEN_AQUI")
+# Rodar bot com token do .env
+bot.run(os.getenv("DISCORD_TOKEN"))
