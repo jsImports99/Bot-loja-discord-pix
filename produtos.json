@@ -1,12 +1,17 @@
 [
   {
-    "nome": "Boost Discord",
-    "preco": 5.00,
-    "descricao": "Aumente o nível do servidor com boost."
+    "nome": "Boost 1 Dungeon Normal",
+    "preco": 0.50,
+    "descricao": "Serviço de rush Dungeon, Rápido e Ágil."
   },
   {
-    "nome": "Logo profissional",
-    "preco": 10.00,
-    "descricao": "Criação de logo profissional para sua loja."
+    "nome": "Boost 1 Dungeon",
+    "preco": 0.70,
+    "descricao": "Serviço de rush Dungeon, com monstros mais fortes, afixos e maiores recompensas."
+  },
+  {
+    "nome": "Serviço Diablo Immortal",
+    "preco": 15.00,
+    "descricao": "Serviço personalizado para jogadores do Diablo."
   }
 ]
