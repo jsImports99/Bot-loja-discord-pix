@@ -1,17 +1,37 @@
 [
   {
-    "nome": "Boost 1 Dungeon Normal",
+    "nome": "1Dungeon M/Normal",
     "preco": 0.50,
-    "descricao": "Serviço de rush Dungeon, Rápido e Ágil."
+    "descricao": "Uma dungeon normal com dificuldade M."
   },
   {
-    "nome": "Boost 1 Dungeon",
+    "nome": "1Dungeon M/Desafio",
     "preco": 0.70,
-    "descricao": "Serviço de rush Dungeon, com monstros mais fortes, afixos e maiores recompensas."
+    "descricao": "Dungeon M com dificuldade de desafio extra."
   },
   {
-    "nome": "Serviço Diablo Immortal",
+    "nome": "Geminhas 63",
     "preco": 15.00,
-    "descricao": "Serviço personalizado para jogadores do Diablo."
+    "descricao": "Serviço semanal – 1x por semana farmando geminhas."
+  },
+  {
+    "nome": "Fenda do medo",
+    "preco": 20.00,
+    "descricao": "Fenda especial com boss do medo. 1x por semana."
+  },
+  {
+    "nome": "Fenda anciã",
+    "preco": 40.00,
+    "descricao": "Fenda com até 280 brasas por semana."
+  },
+  {
+    "nome": "Fazer build / Arrumar build",
+    "preco": 50.00,
+    "descricao": "Montamos ou ajustamos sua build personalizada."
+  },
+  {
+    "nome": "Piloto PVP - Pegar lenda",
+    "preco": 100.00,
+    "descricao": "Piloto até o rank Lenda no PVP do Diablo Immortal."
   }
 ]
